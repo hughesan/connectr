@@ -2,29 +2,87 @@
 title: "Tidy Tuesday 2021-6-15"
 author: "Alexandria Hughes"
 date: "6/10/2021"
-output: html_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+```{r message=FALSE}
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+library(tidyverse)
+library(cowplot)
+library(ggridges)
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+fishing <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-06-08/fishing.csv')
+stocked <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-06-08/stocked.csv')
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+fishing2 <- fishing %>% 
+  filter(str_detect(region, "U.S. Total")) %>% 
+  filter(!is.na(region)) %>% 
+  mutate(species = fct_lump(species, 12)) %>% 
+  filter(species != "Other") 
+```
+
+
+```{r}
+fishing2 %>% 
+  filter(str_detect(region, "U.S. Total")) %>% 
+  filter(!is.na(region)) %>% 
+  mutate(species = fct_lump(species, 12)) %>% 
+  filter(species != "Other") %>% 
+  ggplot(aes(x = year, y = values, color = species)) +
+  geom_line() +
+  facet_wrap(~lake) +
+  xlim(1950,2021)+
+  #ylim(0,20000)+
+  scale_y_sqrt(limits = c(0,15000))+
+  theme_cowplot()+
+  theme(legend.position = "top")
+```
+```{r}
+totfishperlake <- fishing2 %>% group_by(year,lake) %>% summarize(total_fish = sum(values))
+```
+
+
+```{r}
+ggplot(totfishperlake, aes(x=year, y=total_fish, color=lake))+
+  geom_line()+
+  geom_point()+
+  xlim(1921,2021)+
+  theme_cowplot()
+```
+
+
+
+```{r message=FALSE}
+fishing2 %>%
+  #filter(species == "Lake Trout") %>%
+  ggplot(aes(x=year, y=lake, fill=lake))+
+  geom_density_ridges2(rel_min_height = 0.005)+
+  facet_wrap(~species, shrink=FALSE, strip.position="top", nrow=3)+
+ # xlim(1980,2021)+
+  #scale_x_continuous(breaks=c(1980,2000, 2020))+
+  theme(axis.text.x=element_text(angle=37.5))+
+  theme_ridges()+
+  scale_fill_cyclical(values=c("blue", "orange", "green", "purple", "pink"))+
+  labs(x="Year", y="Great Lakes")
+```
+
+```{r message=FALSE}
+fishing2 %>%
+  #filter(species == "Lake Trout") %>%
+  ggplot(aes(x=year, y=lake))+
+  geom_density_ridges(
+    jittered_points = TRUE,
+    position = position_points_jitter(width = 0.05, height = 0),
+    point_shape = '|', point_size = 1.5, point_alpha = 1, alpha = 0.7)+
+  facet_wrap(~species)+
+  theme_minimal()
+```
