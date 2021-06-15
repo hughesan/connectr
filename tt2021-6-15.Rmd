@@ -16,35 +16,89 @@ library(cowplot)
 library(ggridges)
 ```
 
+Read in the data:
 ```{r, message=FALSE, warning=FALSE}
 fishing <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-06-08/fishing.csv')
 stocked <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-06-08/stocked.csv')
 ```
 
+
+Remove Canadian and redundant (individual state) regions; only keep U.S. totals: 
 ```{r}
-fishing2 <- fishing %>% 
-  filter(str_detect(region, "U.S. Total")) %>% 
-  filter(!is.na(region)) %>% 
-  mutate(species = fct_lump(species, 12)) %>% 
-  filter(species != "Other") 
+fishing_m <- fishing %>% 
+  filter(str_detect(region, "U.S. Total")) %>%
+  filter(!is.na(region)) 
 ```
 
 
+There are 51 species of fish reported across the 6 lakes. How does the amount of fish change over time?
 ```{r}
-totfishperlake <- fishing2 %>% 
+totfishperlake <- fishing_m %>% 
   group_by(year,lake) %>% 
   summarize(total_fish = sum(values, na.rm=TRUE))
 #totfishperlake
 ```
 
-
-```{r}
+```{r, message=FALSE, results='asis'}
 ggplot(totfishperlake, aes(x=year, y=total_fish, fill=lake))+
   geom_bar(stat="identity", color="white")+
   scale_fill_manual(values=c("#dbb13b", "#56bda2", "#2494a2", "#304b78", "#2d325a", "#0a0e29"))+
   theme_minimal()+
   xlim(1879,2015)+
   labs(x="Year", y="Total fish (1000 lbs)", fill="Great Lakes")
+```
+
+```{r}
+relfish <- merge(fishing_m, totfishperlake) %>% 
+  filter(total_fish != 0) %>%
+  mutate(freq_fish = values/total_fish) %>%
+  select(year, lake, species, values, total_fish, freq_fish)
+head(relfish)
+```
+
+
+Try displaying ranked relative frequencies with a bump chart: https://github.com/davidsjoberg/ggbump
+```{r}
+library(ggbump)
+```
+
+Need 'rank' for ggbump:
+```{r}
+relfishbump <- relfish %>%
+    mutate(species=fct_lump(species, 12)) %>% 
+  filter(species!="Other") %>%
+  group_by(lake, year) %>%
+  filter(!is.na(freq_fish)) %>%
+  mutate(rank = rank(freq_fish, ties.method = "random")) %>%
+  ungroup() 
+
+#View(relfishbump)
+```
+
+```{r, message=FALSE, results='asis'}
+relfishbump %>% filter(rank < 7 & lake == "Superior") %>%
+ggplot(aes(x=year, y=rank, color=species))+
+  geom_point(size = 4) +
+  geom_bump(size = 1.5, smooth = 8) +
+  theme_minimal_grid(font_size = 11, line_size = 0) +
+  theme(legend.position = "top", panel.grid.major = element_blank()) +
+  labs(y = "RANK", x = "", color="SPECIES") +
+  scale_y_reverse() +
+  xlim(1970, 2015)+
+  scale_color_viridis_d()
+
+```
+
+
+
+Now try out ggridges. Limit to top 12 species so there isn't too much going on:
+
+```{r}
+fishing2 <- fishing %>% 
+  filter(str_detect(region, "U.S. Total")) %>% 
+  filter(!is.na(region)) %>% 
+  mutate(species=fct_lump(species, 12)) %>% 
+  filter(species!="Other") 
 ```
 
 
