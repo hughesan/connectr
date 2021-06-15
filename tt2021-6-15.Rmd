@@ -1,23 +1,22 @@
 ---
-title: "Tidy Tuesday 2021-6-15"
+title: "Great Lakes Fishery Commission"
 author: "Alexandria Hughes"
-date: "6/10/2021"
+date: "| Tidy Tuesday 6/15/2021"
 output: github_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
 
-```{r message=FALSE}
-
+```{r, message=FALSE, echo=FALSE}
 library(tidyverse)
 library(cowplot)
 library(ggridges)
 ```
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 fishing <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-06-08/fishing.csv')
 stocked <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-06-08/stocked.csv')
 ```
@@ -32,57 +31,50 @@ fishing2 <- fishing %>%
 
 
 ```{r}
-fishing2 %>% 
-  filter(str_detect(region, "U.S. Total")) %>% 
-  filter(!is.na(region)) %>% 
-  mutate(species = fct_lump(species, 12)) %>% 
-  filter(species != "Other") %>% 
-  ggplot(aes(x = year, y = values, color = species)) +
-  geom_line() +
-  facet_wrap(~lake) +
-  xlim(1950,2021)+
-  #ylim(0,20000)+
-  scale_y_sqrt(limits = c(0,15000))+
-  theme_cowplot()+
-  theme(legend.position = "top")
-```
-```{r}
-totfishperlake <- fishing2 %>% group_by(year,lake) %>% summarize(total_fish = sum(values))
+totfishperlake <- fishing2 %>% 
+  group_by(year,lake) %>% 
+  summarize(total_fish = sum(values, na.rm=TRUE))
+#totfishperlake
 ```
 
 
 ```{r}
-ggplot(totfishperlake, aes(x=year, y=total_fish, color=lake))+
-  geom_line()+
-  geom_point()+
-  xlim(1921,2021)+
-  theme_cowplot()
+ggplot(totfishperlake, aes(x=year, y=total_fish, fill=lake))+
+  geom_bar(stat="identity", color="white")+
+  scale_fill_manual(values=c("#dbb13b", "#56bda2", "#2494a2", "#304b78", "#2d325a", "#0a0e29"))+
+  theme_minimal()+
+  xlim(1879,2015)+
+  labs(x="Year", y="Total fish (1000 lbs)", fill="Great Lakes")
 ```
 
 
-
-```{r message=FALSE}
+```{r, message=FALSE, results='asis'}
 fishing2 %>%
-  #filter(species == "Lake Trout") %>%
   ggplot(aes(x=year, y=lake, fill=lake))+
-  geom_density_ridges2(rel_min_height = 0.005)+
-  facet_wrap(~species, shrink=FALSE, strip.position="top", nrow=3)+
- # xlim(1980,2021)+
-  #scale_x_continuous(breaks=c(1980,2000, 2020))+
-  theme(axis.text.x=element_text(angle=37.5))+
-  theme_ridges()+
-  scale_fill_cyclical(values=c("blue", "orange", "green", "purple", "pink"))+
+  geom_density_ridges(
+    jittered_points = TRUE,
+    position = position_points_jitter(width = 0.5, height = 0),
+    point_shape = '|', point_size = 1.5, point_alpha = 1, alpha = 0.5)+
+  facet_wrap(~species)+
+  theme_ridges(font_size=10.5)+
+  theme(legend.position="none")+
+  scale_fill_manual(values=c("#dbb13b", "#56bda2", "#2494a2", "#304b78", "#2d325a", "#0a0e29"))+
   labs(x="Year", y="Great Lakes")
 ```
 
-```{r message=FALSE}
+
+```{r, message=FALSE, results='asis'}
 fishing2 %>%
-  #filter(species == "Lake Trout") %>%
-  ggplot(aes(x=year, y=lake))+
+  ggplot(aes(x=year, y=species, fill=species))+
   geom_density_ridges(
     jittered_points = TRUE,
-    position = position_points_jitter(width = 0.05, height = 0),
-    point_shape = '|', point_size = 1.5, point_alpha = 1, alpha = 0.7)+
-  facet_wrap(~species)+
-  theme_minimal()
+    position = position_points_jitter(width = 0.5, height = 0),
+    point_shape = '|', point_size = 1.5, point_alpha = 1, alpha = 0.5)+
+  facet_wrap(~lake)+
+  theme_ridges(font_size=10.5)+
+  theme(legend.position="none")+
+  scale_fill_manual(values=c("#dbb13b", "#56bda2", "#2494a2", "#304b78", "#2d325a", "#0a0e29", "#dbb13b", "#56bda2", "#2494a2", "#304b78", "#2d325a", "#0a0e29"))+
+  labs(x="Year", y="Species")
 ```
+
+
