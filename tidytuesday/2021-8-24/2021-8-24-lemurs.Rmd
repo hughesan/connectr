@@ -1,0 +1,69 @@
+---
+title: "Lemurs!"
+author: "Alexandria Hughes"
+date: "8/24/2021"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+## Libraries
+
+```{r}
+library(tidyverse)
+library(corrr)
+library(viridis)
+```
+
+## Read in the data
+
+```{r, warning=FALSE}
+lemurs <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-08-24/lemur_data.csv')
+```
+
+## Basic exploration
+
+```{r}
+head(lemurs)
+#str(lemurs)
+```
+
+
+## Correlation with corrr
+
+Many of these variables are numeric. We can quickly identify correlated variables by using corrr::correlate() on a dataframe containing only numeric variables and then plotting correlations between all variable pairs.
+
+```{r}
+lemurnum <- lemurs %>% 
+  dplyr::select_if(is.numeric)
+```
+
+Some of these variables hold information that isn't likely to be meaningfully correlated with anything, such as days since lemur weight last taken. Removing some of these variables to make the plot easier to look at, too.
+```{r}
+lemurnum <- lemurnum %>% 
+  dplyr::select(-starts_with("age")) %>% 
+  dplyr::select(-contains("wt"))
+```
+
+
+```{r}
+lemurcor <- corrr::correlate(lemurnum)
+lemurcor
+```
+
+
+
+```{r}
+rplot(lemurcor)+
+  theme(axis.text.x = element_text(angle=37.5, vjust=1, hjust=1),
+        legend.position = "top")+
+  guides(color = guide_colorbar(barheight = 0.5))+
+  scale_color_viridis()+
+  labs(color = "Correlation")
+```
+
+Some of these correlations make sense, which is reassuring: percent pregnancy remaining (pct_preg_remain_if_preg) is positively correlated with days before infant birth if pregnant (days_before_inf_birth_if_preg), which we would expect. 
+
+Some of these relationships are likely spurious, but others generate interesting hypotheses that could be tested on a different data set. Is litter size negatively correlated with expected gestation length? Is conception month negatively associated with birth month (probably spurious)? 
